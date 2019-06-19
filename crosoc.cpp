@@ -67,7 +67,7 @@ namespace crosoc
         if (addr == INADDR_NONE) {
             struct addrinfo  hints = { 0 };
             struct addrinfo* result = nullptr;
-            hints.ai_family   = AF_UNSPEC;
+            hints.ai_family   = AF_INET;
             hints.ai_socktype = SOCK_DGRAM;
 
             if (getaddrinfo(host.c_str(), "13", &hints, &result) != 0) {
@@ -79,8 +79,12 @@ namespace crosoc
 
             for (struct addrinfo* rp = result; rp != NULL; rp = rp->ai_next) {
                 if (rp->ai_addr) {
-                    addr = ((sockaddr_in*)rp->ai_addr)->sin_addr.s_addr;
-                    break;
+                    if (rp->ai_family == AF_INET) {
+                        addr = ((sockaddr_in*)rp->ai_addr)->sin_addr.s_addr;
+                        if (addr) {
+                            break;
+                        }
+                    }
                 }
             }
 
