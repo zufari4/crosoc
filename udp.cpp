@@ -1,3 +1,4 @@
+#include "Config.h"
 #include "udp.h"
 #include <string.h>
 
@@ -5,7 +6,7 @@ Udp_connection::Udp_connection():
     m_open(false),
     m_socket(INVALID_SOCKET)
 {
-    m_tmp_buff.resize(508);
+    m_tmp_buff.resize(UDP_BUFFER_SIZE);
 }
 
 Udp_connection::~Udp_connection()
@@ -17,25 +18,25 @@ bool Udp_connection::Open(int port /*= 0*/)
 {
     m_last_error.clear();
 
-    if (!crosoc::Init()) {
-        m_last_error = crosoc::Get_last_error();
+    if (!Crosoc::Init()) {
+        m_last_error = Crosoc::Get_last_error();
         return false;
     }
 
     m_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (m_socket == INVALID_SOCKET)  {
-        m_last_error = crosoc::Get_last_error();
+        m_last_error = Crosoc::Get_last_error();
         return false;
     }
     
     sockaddr_in addr;
-    if (!crosoc::Make_endpoint("", port, addr)) {
-        m_last_error = crosoc::Get_last_error();
+    if (!Crosoc::Make_endpoint("", port, addr)) {
+        m_last_error = Crosoc::Get_last_error();
         return false;
     }
     
     if (bind(m_socket, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) {
-        m_last_error = crosoc::Get_last_error();
+        m_last_error = Crosoc::Get_last_error();
         Close();
         return false;
     }
@@ -46,7 +47,7 @@ bool Udp_connection::Open(int port /*= 0*/)
 
 void Udp_connection::Close()
 {
-    crosoc::Close(m_socket);
+    Crosoc::Close(m_socket);
     m_open = false;
 }
 
@@ -67,19 +68,10 @@ int Udp_connection::Receive(void* data, int max_size, sockaddr_in* endpoint /*= 
     }
 
     if (recv_len == SOCKET_ERROR) {
-        m_last_error = crosoc::Get_last_error();
+        m_last_error = Crosoc::Get_last_error();
     }
 
     return recv_len;
-}
-
-int Udp_connection::Receive(std::string& data, sockaddr_in* endpoint /*= nullptr*/)
-{
-    int len = Receive(&m_tmp_buff[0], (int)m_tmp_buff.size(), endpoint);
-    if (len != SOCKET_ERROR) {
-        data.assign(&(m_tmp_buff[0]), len);
-    }
-    return len;
 }
 
 bool Udp_connection::Send(const void* data, int size, const sockaddr_in& endpoin)
@@ -91,7 +83,7 @@ bool Udp_connection::Send(const void* data, int size, const sockaddr_in& endpoin
 
     int slen = sizeof(sockaddr_in);
     if (sendto(m_socket, (const char *)data, size, 0, (const sockaddr*)&endpoin, slen) == SOCKET_ERROR) {
-        m_last_error = crosoc::Get_last_error();
+        m_last_error = Crosoc::Get_last_error();
         return false;
     }
 

@@ -1,0 +1,7 @@
+#pragma once
+
+#define DEF_TIMEOUT 5
+#define DEF_HTTP_PORT 80
+#define DEF_HTTPS_PORT 443
+#define MAX_TCP_PACKET_SIZE 65535
+#define UDP_BUFFER_SIZE 508
