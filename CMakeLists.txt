@@ -19,6 +19,7 @@ ssl_conn.cpp
 tcp.cpp
 udp.cpp
 wsa_guard.cpp
+Endpoint.cpp
 )
 else()
 set(SOURCES
@@ -28,6 +29,7 @@ shared.cpp
 ssl_conn.cpp
 tcp.cpp
 udp.cpp
+Endpoint.cpp
 )
 endif()
 

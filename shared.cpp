@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #endif
+#include <memory>
 
 namespace Crosoc
 {
@@ -42,62 +43,76 @@ namespace Crosoc
     void Close(SOCKET& sock)
     {
         if (sock != INVALID_SOCKET) {
-            int status = 0;
     #ifdef _WIN32
-            status = shutdown(sock, SD_BOTH);
-            if (status == 0) { closesocket(sock); }
+            shutdown(sock, SD_BOTH);
+            closesocket(sock);
     #else
-            status = shutdown(sock, SHUT_RDWR);
-             if (status == 0) { close(sock); }
+            shutdown(sock, SHUT_RDWR);
+            close(sock);
     #endif
             sock = INVALID_SOCKET;
         }
     }
 
-    bool Make_endpoint(const std::string& host, int port, sockaddr_in& res)
+    void FillByAddr(sockaddr_in& res, unsigned long addr, int port)
     {
-        unsigned long addr = INADDR_NONE;
-        if (host.empty()) {
-            addr = htonl(INADDR_ANY);
-        }
-        else {
-            inet_pton(AF_INET, host.c_str(), &addr);
-        }
-
-        if (addr == INADDR_NONE) {
-            struct addrinfo  hints = { 0 };
-            struct addrinfo* result = nullptr;
-            hints.ai_family   = AF_INET;
-            hints.ai_socktype = SOCK_DGRAM;
-
-            if (getaddrinfo(host.c_str(), "13", &hints, &result) != 0) {
-                return false;
-            }
-            if (result == nullptr) {
-                return false;
-            }
-
-            for (struct addrinfo* rp = result; rp != NULL; rp = rp->ai_next) {
-                if (rp->ai_addr) {
-                    if (rp->ai_family == AF_INET) {
-                        addr = ((sockaddr_in*)rp->ai_addr)->sin_addr.s_addr;
-                        if (addr) {
-                            break;
-                        }
-                    }
-                }
-            }
-
-			freeaddrinfo(result);
-            if (addr == INADDR_NONE) {
-                return false;
-            }
-        }
-
-        memset(&res, 0, sizeof(res));
-        res.sin_family = AF_INET;
+        memset(&res, 0, sizeof(sockaddr_in));
+        res.sin_family      = AF_INET;
         res.sin_addr.s_addr = addr;
-        res.sin_port = htons((uint16_t)port);
+        res.sin_port        = htons(static_cast<uint16_t>(port));
+    }
+
+    bool Make_endpoint(const std::string& host, int port, sockaddr_in& res, ProtocolType protoType /*= ProtocolType::TCP*/)
+    {
+        if (host.empty()) {
+            FillByAddr(res, INADDR_ANY,  port);
+            return true;
+        }
+
+        // Try to convert from IP address
+        {
+            unsigned long addr = INADDR_NONE;
+            inet_pton(AF_INET, host.c_str(), &addr);
+            if (addr != INADDR_NONE) {
+                FillByAddr(res, addr, port);
+                return true;
+            }
+        }
+
+        // Try to get addr from host name
+        {
+            addrinfo* add_list = nullptr;
+            addrinfo  hints;
+            hints.ai_flags = 0;
+            hints.ai_family = AF_INET;
+            hints.ai_addrlen = 0;
+            hints.ai_canonname = nullptr;
+            hints.ai_addr = nullptr;
+            hints.ai_next = nullptr;
+            if (protoType == ProtocolType::TCP) {
+                hints.ai_socktype = SOCK_STREAM;
+                hints.ai_protocol = IPPROTO_TCP;
+            }
+            else if (protoType == ProtocolType::UDP) {
+                hints.ai_socktype = SOCK_DGRAM;
+                hints.ai_protocol = IPPROTO_UDP;
+            }
+            else {
+                hints.ai_socktype = 0;
+                hints.ai_protocol = 0;
+            }
+
+            if (getaddrinfo(host.c_str(), std::to_string(port).c_str(), &hints, &add_list) != 0) {
+                return false;
+            }
+            if (add_list == nullptr) {
+                return false;
+            }
+
+            res = *((sockaddr_in*)(add_list->ai_addr));
+            freeaddrinfo(add_list);
+        }
+
         return true;
     }
 

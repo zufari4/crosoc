@@ -39,6 +39,9 @@
     <ClCompile Include="ssl_conn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Endpoint.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -75,6 +78,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ssl_conn.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Endpoint.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProtocolType.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

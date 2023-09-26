@@ -13,7 +13,8 @@
 
 namespace Crosoc
 {
-    LIB_API std::unique_ptr<ITCPConnection> MakeTCPConnection();
-    LIB_API std::unique_ptr<IUDPConnection> MakeUDPConnection();
-    LIB_API std::unique_ptr<IHTTPConnection> MakeHTTPConnection(bool useSSL);
-}
+    LIB_API std::unique_ptr<Crosoc::ITCPConnection> MakeTCPConnection();
+    LIB_API std::unique_ptr<Crosoc::ITCPConnection> MakeTCPConnection(const Endpoint& client);
+    LIB_API std::unique_ptr<Crosoc::IUDPConnection> MakeUDPConnection();
+    LIB_API std::unique_ptr<Crosoc::IHTTPConnection> MakeHTTPConnection(bool useSSL);
+};

@@ -6,10 +6,13 @@
 
 namespace Crosoc
 {
+    struct Endpoint;
+
 	class ITCPConnection
 	{
 	public:
 		ITCPConnection() {}
+        ITCPConnection(const Endpoint&) {}
 		virtual ~ITCPConnection() {}
         virtual bool Connect(const std::string& server, int port, int timeout_sec = DEF_TIMEOUT) = 0;
         virtual void Disconnect() = 0;
@@ -21,6 +24,8 @@ namespace Crosoc
         virtual const std::string& GetServerHost() const = 0;
         virtual void SetError(const std::string& error_msg) = 0;
         virtual bool IsClosed() const = 0;
+        virtual bool Open(uint16_t port, int countListen) = 0;
+        virtual bool Accept(Endpoint& out) = 0;
 	};
 
 }

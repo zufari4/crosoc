@@ -11,6 +11,12 @@ namespace Crosoc
         return res;
     }
 
+    LIB_API std::unique_ptr<ITCPConnection> MakeTCPConnection(const Endpoint& client)
+    {
+        auto res = std::make_unique<Tcp_connection>(client);
+        return res;
+    }
+
     LIB_API std::unique_ptr<IUDPConnection> MakeUDPConnection()
     {
         auto res = std::make_unique<Udp_connection>();
@@ -23,6 +29,5 @@ namespace Crosoc
         return res;
     }
 }
-
 
 

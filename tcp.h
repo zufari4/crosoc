@@ -7,6 +7,7 @@ class Tcp_connection: public Crosoc::ITCPConnection
 {
 public:
     Tcp_connection();
+    Tcp_connection(const Crosoc::Endpoint& client);
     virtual ~Tcp_connection();
     bool Connect(const std::string& server, int port, int timeout_sec) override;
     void Disconnect() override;
@@ -19,7 +20,8 @@ public:
     void SetError(const std::string& error_msg) override;
     bool IsClosed() const override;
     virtual int64_t Receive(std::vector<uint8_t>& out, int64_t need_size, int timeout_sec = DEF_TIMEOUT, int timeout_usec = 0);
-    
+    bool Open(uint16_t port, int countListen) override;
+    bool Accept(Crosoc::Endpoint& out) override;
 protected:
     virtual int Recv(void* data, int64_t max_size, int timeout_sec, int timeout_usec = 0);
     bool m_open;

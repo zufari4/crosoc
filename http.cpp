@@ -4,6 +4,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <cstring>
 
 static std::atomic_int counterID{0};
 
@@ -56,7 +57,7 @@ int64_t Http_connection::Receive_data(const std::string& message, char* out, int
     bool recive_to_end = false;
     bool is_chucked = false;
     if (bodySize <= 0) {
-        m_conn->SetError("Http: Cant get body size (" + header + ")");
+        m_conn->SetError("HTTP: Cant get body size (" + header + ")");
         is_chucked = Is_chunked(header);
         recive_to_end = !is_chucked;
     }
@@ -64,7 +65,6 @@ int64_t Http_connection::Receive_data(const std::string& message, char* out, int
     if (is_chucked) {
         int64_t chuck_size;
         int64_t res;
-        std::vector<uint8_t> chunk;
         char buff[2];
         std::vector<uint8_t> result;
 
@@ -75,15 +75,12 @@ int64_t Http_connection::Receive_data(const std::string& message, char* out, int
                 break;
             }
             if (chuck_size > 0) {
-                res = static_cast<Tcp_connection*>(m_conn.get())->Receive(chunk, chuck_size, timeout_sec);
+                res = static_cast<Tcp_connection*>(m_conn.get())->Receive(result, chuck_size, timeout_sec);
                 if (res <= 0) {
                     break;
                 }
-                if (!chunk.empty()) {
-                    result.insert(result.end(), chunk.begin(), chunk.end());
-                }
             }
-            // recive \r\n
+            // receive \r\n
             res = m_conn->Receive(&buff, 2, 2, timeout_sec);
         } while (res > 0 && chuck_size > 0);
 
@@ -112,7 +109,7 @@ int64_t Http_connection::Receive_data(const std::string& message, char* out, int
     }
 
     if (bodySize != len && !recive_to_end && !is_chucked) {
-        m_conn->SetError("Http: Wrong body size " + std::to_string(len) + " (" + std::to_string(bodySize) + ")");
+        m_conn->SetError("HTTP: Wrong body size " + std::to_string(len) + " (" + std::to_string(bodySize) + ")");
         return SOCKET_ERROR;
     }
 
@@ -260,9 +257,9 @@ std::string Http_connection::URLEncode(const std::string& s)
         else
         {
             unsigned nib = (c >> 4) & 0xf;
-            buf[1] = nib < 10 ? '0' + nib : 'a' + (nib - 10);
+            buf[1] = (char)(nib < 10 ? '0' + nib : 'a' + (nib - 10));
             nib = c & 0xf;
-            buf[2] = nib < 10 ? '0' + nib : 'a' + (nib - 10);
+            buf[2] = (char)(nib < 10 ? '0' + nib : 'a' + (nib - 10));
             enc.append(&buf[0], 3);
         }
     }

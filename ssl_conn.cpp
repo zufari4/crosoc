@@ -3,9 +3,9 @@
 
 Ssl_connection::Ssl_connection() :
     Tcp_connection(),
+    m_ctx(nullptr),
     m_ssl(nullptr),
-    m_ssl_socket(INVALID_SOCKET),
-    m_ctx(nullptr)
+    m_ssl_socket(INVALID_SOCKET)
 {
 
 }
@@ -18,7 +18,13 @@ bool Ssl_connection::Connect(const std::string& server, int port, int timeout_se
     SSL_library_init();
     SSLeay_add_ssl_algorithms();
     SSL_load_error_strings();
+    
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    const SSL_METHOD* meth = TLS_client_method();
+#else
     const SSL_METHOD* meth = TLSv1_2_client_method();
+#endif
+    
     m_ctx = SSL_CTX_new(meth);
     m_ssl = SSL_new(m_ctx);
     if (!m_ssl) {
@@ -38,13 +44,13 @@ bool Ssl_connection::Connect(const std::string& server, int port, int timeout_se
 void Ssl_connection::Disconnect()
 {
     Crosoc::Close(m_ssl_socket);
-    SSL_shutdown(m_ssl);
-    SSL_free(m_ssl);
-    SSL_CTX_free(m_ctx);
+    if (m_ssl != nullptr) SSL_shutdown(m_ssl);
+    if (m_ssl != nullptr) SSL_free(m_ssl);
+    if (m_ctx != nullptr) SSL_CTX_free(m_ctx);
     Tcp_connection::Disconnect();
 }
 
-int Ssl_connection::Recv(void* data, int64_t max_size, int timeout_sec /*= DEF_TIMEOUT*/, int timeout_usec /*= 0*/)
+int Ssl_connection::Recv(void* data, int64_t max_size, int /* timeout_sec = DEF_TIMEOUT*/, int /*timeout_usec = 0*/)
 {
     if (!m_open) {
         m_last_error = "Connection not open";
@@ -80,14 +86,15 @@ bool Ssl_connection::Send(const void* data, int size)
 
 void Ssl_connection::Log_ssl_error()
 {
-    int err;
+    int err = ERR_get_error();
     std::string strErr;
     char buff[1024];
 
-    while (err = ERR_get_error()) {
+    while (err) {
         buff[0] = '\0';
         ERR_error_string_n(err, buff, sizeof(buff));
         strErr += buff;
+        err = ERR_get_error();
     }
     if (!strErr.empty()) {
         m_last_error = strErr;

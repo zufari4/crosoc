@@ -1,4 +1,5 @@
 #include "tcp.h"
+#include "Endpoint.h"
 #include <string.h>
 #include <algorithm>
 
@@ -9,9 +10,64 @@ Tcp_connection::Tcp_connection():
     m_tmp_buff.resize(MAX_TCP_PACKET_SIZE);
 }
 
+Tcp_connection::Tcp_connection(const Crosoc::Endpoint& client)
+    : ITCPConnection(client)
+    , m_open(client.socket != INVALID_SOCKET)
+    , m_socket(client.socket)
+    
+{
+    m_tmp_buff.resize(MAX_TCP_PACKET_SIZE);
+}
+
 Tcp_connection::~Tcp_connection()
 {
     Disconnect();
+}
+
+bool Tcp_connection::Open(uint16_t port, int countListen)
+{
+    m_last_error.clear();
+    m_open = false;
+
+    if (!Crosoc::Init()) {
+        m_last_error = "Init crosoc: " + Crosoc::Get_last_error();
+        return false;
+    }
+
+    m_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (m_socket == INVALID_SOCKET) {
+        m_last_error = "Create socket: " + Crosoc::Get_last_error();
+        return false;
+    }
+
+    sockaddr_in address;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(port);
+    address.sin_family = AF_INET;
+
+    if (bind(m_socket, (struct sockaddr*)&address, sizeof(address)) == INVALID_SOCKET) {
+        m_last_error = "Bind tcp: " + Crosoc::Get_last_error();
+        return false;
+    }
+
+    if (listen(m_socket, countListen) == INVALID_SOCKET) {
+        m_last_error = m_last_error = "listen: " + Crosoc::Get_last_error();
+        return false;
+    }
+
+    m_open = true;
+    return true;
+}
+
+bool Tcp_connection::Accept(Crosoc::Endpoint& out)
+{
+    socklen_t addrlen = sizeof(out.addr);
+    out.socket = accept(m_socket, (struct sockaddr*)&out.addr, &addrlen);
+    if (out.socket == INVALID_SOCKET) {
+        m_last_error = Crosoc::Get_last_error();
+        return false;
+    }
+    return true;
 }
 
 bool Tcp_connection::Connect(const std::string& server, int port, int timeout_sec /*= 5*/)
@@ -90,6 +146,10 @@ int Tcp_connection::Recv(void* data, int64_t max_size, int timeout_sec /*=5*/, i
 
 int64_t Tcp_connection::Receive(void* out, int64_t outSize, int64_t need_size, int timeout_sec /*=5*/, int timeout_usec /*= 0*/)
 {
+    if (out == nullptr) {
+        m_last_error = "Destination buffer is empty";
+        return 0;
+    }
     if (need_size == 0) {
         return ReceiveAll(out, outSize, timeout_sec, timeout_usec);
     }
@@ -145,6 +205,7 @@ int64_t Tcp_connection::ReceiveAll(void* out, int64_t outSize, int timeout_sec, 
 int64_t Tcp_connection::Receive(std::vector<uint8_t>& out, int64_t need_size, int timeout_sec /*= DEF_TIMEOUT*/, int timeout_usec /*= 0*/)
 {
     int len;
+    int64_t all_len = 0;
 
     do
     {
@@ -152,10 +213,11 @@ int64_t Tcp_connection::Receive(std::vector<uint8_t>& out, int64_t need_size, in
         if (len > 0) {
             out.insert(out.end(), m_tmp_buff.begin(), m_tmp_buff.begin() + len);
             need_size -= len;
+            all_len += len;
         }
     } while (len > 0 && need_size > 0);
 
-    return (int64_t)out.size();
+    return all_len;
 }
 
 bool Tcp_connection::Send(const void* data, int size)
