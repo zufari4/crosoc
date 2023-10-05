@@ -1,11 +1,17 @@
 #include "ssl_conn.h"
-#include "openssl/err.h"
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 
 Ssl_connection::Ssl_connection() :
     Tcp_connection(),
     m_ctx(nullptr),
-    m_ssl(nullptr),
-    m_ssl_socket(INVALID_SOCKET)
+    m_ssl(nullptr)
+{
+
+}
+
+Ssl_connection::~Ssl_connection()
 {
 
 }
@@ -26,15 +32,20 @@ bool Ssl_connection::Connect(const std::string& server, int port, int timeout_se
 #endif
     
     m_ctx = SSL_CTX_new(meth);
-    m_ssl = SSL_new(m_ctx);
-    if (!m_ssl) {
+    if (m_ctx == nullptr) {
         Log_ssl_error();
         return false;
     }
-    m_ssl_socket = SSL_get_fd(m_ssl);
-    SSL_set_fd(m_ssl, (int)m_socket);
-    int err = SSL_connect(m_ssl);
-    if (err <= 0) {
+    m_ssl = SSL_new(m_ctx);
+    if (m_ssl == nullptr) {
+        Log_ssl_error();
+        return false;
+    }
+    if (SSL_set_fd(m_ssl, (int)m_socket) != 1) {
+        Log_ssl_error();
+        return false;
+    }
+    if (SSL_connect(m_ssl) < 1) {
         Log_ssl_error();
         return false;
     }
@@ -43,10 +54,15 @@ bool Ssl_connection::Connect(const std::string& server, int port, int timeout_se
 
 void Ssl_connection::Disconnect()
 {
-    Crosoc::Close(m_ssl_socket);
-    if (m_ssl != nullptr) SSL_shutdown(m_ssl);
-    if (m_ssl != nullptr) SSL_free(m_ssl);
-    if (m_ctx != nullptr) SSL_CTX_free(m_ctx);
+    if (m_ssl != nullptr) {
+        SSL_shutdown(m_ssl);
+        SSL_free(m_ssl);
+        m_ssl = nullptr;
+    }
+    if (m_ctx != nullptr) {
+        SSL_CTX_free(m_ctx);
+        m_ctx = nullptr;
+    }
     Tcp_connection::Disconnect();
 }
 
@@ -69,7 +85,7 @@ int Ssl_connection::Recv(void* data, int64_t max_size, int /* timeout_sec = DEF_
         Disconnect();
     }
     if (recv_len == 0) {
-        m_last_error = "Connection droped";
+        m_last_error = "Connection dropped";
         Disconnect();
     }
     return recv_len;

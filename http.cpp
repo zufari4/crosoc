@@ -29,6 +29,7 @@ bool Http_connection::Connect(const std::string& server, int port /*= 80*/, int 
 void Http_connection::Disconnect()
 {
     m_conn->Disconnect();
+    m_conn.reset();
 }
 
 int64_t Http_connection::Get(const std::string& path, char* out, int64_t outSize, int timeout_sec /*=DEF_TIMEOUT*/)
@@ -137,6 +138,11 @@ int Http_connection::GetID() const
     return id_;
 }
 
+void Http_connection::addHeader(const std::string& name, const std::string& value)
+{
+    headers_[name] = value;
+}
+
 int64_t Http_connection::Receive_header(std::string& header, int timeout_sec /*= DEF_TIMEOUT*/)
 {
     char buff;
@@ -214,10 +220,16 @@ bool Http_connection::Is_chunked(const std::string& header) const
 
 std::string Http_connection::Make_get_message(const std::string& path) const
 {
-    return
-    "GET " + path + " HTTP/1.1\r\n"
-        "Host: " + m_conn->GetServerHost() + "\r\n"
-        "Accept: */*\r\n\r\n";
+    std::string res =
+        "GET " + path + " HTTP/1.1\r\n"
+        "Host: " + m_conn->GetServerHost() + "\r\n";
+    res += headers_.empty() ? "Accept: */*\r\n" : "";
+    
+    for (const auto& it : headers_) {
+        res += it.first + ": " + it.second + "\r\n";
+    }
+    res += "\r\n";
+    return res;
 }
 
 std::string Http_connection::Make_post_message(const std::string& path, const Crosoc::HttpPostData& data) const

@@ -20,6 +20,7 @@ namespace Crosoc
         virtual bool IsClosed() const = 0;
         virtual const char* GetLastError() const = 0;
         virtual int GetID() const = 0;
+        virtual void addHeader(const std::string& name, const std::string& value) = 0;
     };
 
 }

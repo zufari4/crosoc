@@ -1,11 +1,18 @@
 #pragma once
 #include "tcp.h"
-#include <openssl/ssl.h>
+
+
+struct ssl_ctx_st;
+struct ssl_st;
+typedef struct ssl_ctx_st SSL_CTX;
+typedef struct ssl_st SSL;
+
 
 class Ssl_connection : public Tcp_connection
 {
 public:
     Ssl_connection();
+    ~Ssl_connection();
     bool Connect(const std::string& server, int port, int timeout_sec) override;
     void Disconnect() override;
     bool Send(const void* data, int size) override;
@@ -15,5 +22,4 @@ private:
     void Log_ssl_error();
     SSL_CTX* m_ctx;
     SSL* m_ssl;
-    SOCKET m_ssl_socket;
 };

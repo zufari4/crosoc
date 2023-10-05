@@ -2,6 +2,7 @@
 #include "ITCPConnection.h"
 #include "IHTTPConnection.h"
 #include <memory>
+#include <map>
 
 class Http_connection: public Crosoc::IHTTPConnection
 {
@@ -15,6 +16,7 @@ public:
 	bool IsClosed() const override;
     const char* GetLastError() const override;
     int GetID() const override;
+    void addHeader(const std::string& name, const std::string& value) override;
 private:
     int64_t  Receive_header(std::string& header, int timeout_sec = DEF_TIMEOUT);
     int64_t  Recive_chunk_size(int64_t& chunk_size, int timeout_sec = DEF_TIMEOUT);
@@ -30,4 +32,5 @@ private:
     std::unique_ptr<Crosoc::ITCPConnection> m_conn;
     tm tmptm_;
     int id_;
+    std::map<std::string, std::string> headers_;
 };
